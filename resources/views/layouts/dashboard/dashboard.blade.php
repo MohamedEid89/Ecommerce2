@@ -11,7 +11,8 @@
     <div class="wrapper">
         <!--sidebar wrapper -->
         <div class="sidebar-wrapper" data-simplebar="true">
-            @include('layouts.dashboard.partials.sidebar')
+            {{-- @include('layouts.dashboard.partials.sidebar') --}}
+            <x-nav />
         </div>
         <!--end sidebar wrapper -->
         <!--start header -->

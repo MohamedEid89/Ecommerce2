@@ -23,3 +23,4 @@
     <link rel="stylesheet" href="{{ asset('assets/css/semi-dark.css') }}" />
     <link rel="stylesheet" href="{{ asset('assets/css/header-colors.css') }}" />
     <link rel="stylesheet" href="{{ asset('assets/plugins/Drag-And-Drop/dist/imageuploadify.min.css') }}" />
+    <link href="https://cdn.jsdelivr.net/npm/@yaireo/tagify/dist/tagify.css" rel="stylesheet" type="text/css" />

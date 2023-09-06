@@ -17,7 +17,30 @@ class CategoriesController extends Controller
      */
     public function index()
     {
-        $categories = Category::all();
+        $request = request();
+        $categories = Category::with('parent')
+            /*leftJoin('categories as parents', 'parents.id', '=', 'categories.parent_id')
+            ->select([
+                'categories.*',
+                'parents.name as parent_name'
+            ])*/
+            //->withCount('products')
+            ->withCount([
+                'products as products_number' => function ($query) {
+                    $query->where('status', '=', 'active');
+                }
+            ])
+            ->filter($request->query())
+            //->withTrashed()
+            //->onlyTrashed()
+            ->orderBy('categories.name')->paginate(99999);
+        /////////////////////////
+        //$categories = Category::Active()->paginate();
+        //$categories = Category::status('active')->paginate();
+
+
+
+        // $categories = Category::paginate();
         return view('dashboard.categories.index', compact('categories'));
     }
 
@@ -36,6 +59,8 @@ class CategoriesController extends Controller
      */
     public function store(Request $request)
     {
+        $request->validate(Category::rules());
+
         $request->merge([
             'slug' => Str::slug($request->post('name'))
         ]);
@@ -45,16 +70,18 @@ class CategoriesController extends Controller
         $data['image'] = $this->uploadImage($request);
 
         $categories = Category::create($data);
-        return redirect()->route('categories.index')
+        return redirect()->route('dashboard.categories.index')
             ->with('success', 'Category Created Successfully');
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(Category $category)
     {
-        //
+        return view('dashboard.categories.show', [
+            'category' => $category
+        ]);
     }
 
     /**
@@ -65,7 +92,7 @@ class CategoriesController extends Controller
         try {
             $category = Category::findOrFail($id);
         } catch (Exception $e) {
-            return redirect()->route('categories.index')
+            return redirect()->route('dashboard.categories.index')
                 ->with('warning', 'Record not found!');
         }
 
@@ -86,21 +113,26 @@ class CategoriesController extends Controller
      */
     public function update(Request $request, $id)
     {
+        $request->validate(Category::rules($id));
+
         $category = Category::findOrFail($id);
 
         $old_image = $category->image;
 
         $data = $request->except('image');
 
-        $data['image'] = $this->uploadImage($request);
+        $new_image = $this->uploadImage($request);
 
+        if ($new_image) {
+            $data['image'] = $new_image;
+        }
         $category->update($data);
 
-        if ($old_image && $data['image']) {
+        if ($old_image && $new_image) {
             Storage::disk('uploads')->delete($old_image);
         }
 
-        return redirect()->route('categories.index')
+        return redirect()->route('dashboard.categories.index')
             ->with('success', 'Category updated Successfully');
     }
 
@@ -116,7 +148,7 @@ class CategoriesController extends Controller
         if ($category->image) {
             Storage::disk('uploads')->delete($category->image);
         }
-        return redirect()->route('categories.index')
+        return redirect()->route('dashboard.categories.index')
             ->with('success', 'Category deleted Successfully');
     }
 
@@ -130,5 +162,28 @@ class CategoriesController extends Controller
             'disk' => 'uploads'
         ]);
         return $path;
+    }
+
+
+    public function trash()
+    {
+        $categories = Category::onlyTrashed()->paginate();
+        return view('dashboard.categories.trash', compact('categories'));
+    }
+    public function restore(Request $request, $id)
+    {
+        $category = Category::onlyTrashed()->findOrFail($id);
+        $category->restore();
+        return redirect()->route('dashboard.categories.trash')->with('success', 'Category restored successfully!');
+    }
+
+    public function forceDelete($id)
+    {
+        $category = Category::onlyTrashed()->findOrFail($id);
+        $category->forceDelete();
+        if ($category->image) {
+            Storage::disk('uploads')->delete($category->image);
+        }
+        return redirect()->route('dashboard.categories.trash')->with('success', 'Category deleted forever successfully!');
     }
 }
